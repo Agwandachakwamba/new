@@ -1,0 +1,8 @@
+<resources>
+    <color name="redPrimary">#C62828</color>
+    <color name="redDark">#8E0000</color>
+    <color name="black">#000000</color>
+    <color name="cardBg">#121212</color>
+    <color name="greenWin">#2E7D32</color>
+    <color name="redLoss">#C62828</color>
+</resources>
