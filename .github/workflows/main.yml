@@ -1,52 +1,86 @@
+name: Android CI
 
-plugins {
-    id("com.android.application") version "8.2.0" apply false
-    id("org.jetbrains.kotlin.android") version "1.9.22" apply false
-}
+on:
+  push:
+    branches: ["main"]
+  pull_request:
 
-#!/usr/bin/env sh
-# Use Android Studio to run Gradle tasks for this project.
+jobs:
+  build:
+    runs-on: ubuntu-latest
 
-@echo off
-echo Use Android Studio to run Gradle tasks for this project.
+    permissions:
+      # Needed to create releases
+      contents: write
 
-# Keys injected at your request (avoid committing to public repos)
-FOOTBALL_DATA_API_KEY=87a44f21652940bfa27f5ac8fdd4a914
-ODDS_API_KEY=b31e077b238563b56b01652b9b67025f
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-# Agwanda Predicts — Pro Build (Compose)
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
 
-**Features**
-- Pro tabs (pill indicator, animated)
-- Predictions: tips + confidence meter + odds (H/D/A) from The Odds API
-- Results: final score + closing odds + win/loss (thumbs)
-- Live: auto-refresh stub for live scores
-- Repository pattern + Retrofit (Odds API + Football-Data scaffolding)
-- Red/Black theme (Material 3)
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
 
-**Keys**
-- In `local.properties`:
-  - `FOOTBALL_DATA_API_KEY=`
-  - `ODDS_API_KEY=`
+      # Cache Gradle
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
 
-**Build**
-- Open in Android Studio, sync, Build > Build APK(s)
+      # Cache Android build system
+      - name: Cache Android Build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.android/build-cache
+          key: android-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            android-${{ runner.os }}-
 
-pluginManagement {
-    repositories {
-        gradlePluginPortal()
-        google()
-        mavenCentral()
-    }
-}
-dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    repositories {
-        google()
-        mavenCentral()
-        // jitpack can be added if you decide to use MPAndroidChart or other libs
-        // maven { url = uri("https://jitpack.io") }
-    }
-}
-rootProject.name = "AgwandaPredicts"
-include(":app")
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Clean and Build Debug APK
+        run: ./gradlew clean assembleDebug --stacktrace
+
+      - name: Verify APK size
+        run: ls -lh app/build/outputs/apk/debug/
+
+      - name: Check APK validity
+        run: |
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          SIZE=$(stat -c%s "$APK")
+          echo "APK size: $SIZE bytes"
+          if [ $SIZE -lt 5000000 ]; then
+            echo "❌ APK too small, something went wrong!"
+            exit 1
+          fi
+
+      - name: Upload APK to Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Create GitHub Release
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.${{ github.run_number }}
+          name: Release v1.${{ github.run_number }}
+          body: |
+            🚀 Automatic release with APK build.
+          files: |
+            app/build/outputs/apk/debug/app-debug.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
