@@ -10,7 +10,6 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      # Needed to create releases
       contents: write
 
     steps:
@@ -26,7 +25,12 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      # Cache Gradle
+      # ✅ Install required SDK packages (adjust if your app needs different versions)
+      - name: Install required SDK packages
+        run: |
+          sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools"
+
+      # ✅ Cache Gradle dependencies
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
@@ -37,21 +41,12 @@ jobs:
           restore-keys: |
             gradle-${{ runner.os }}-
 
-      # Cache Android build system
-      - name: Cache Android Build
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.android/build-cache
-          key: android-${{ runner.os }}-${{ github.sha }}
-          restore-keys: |
-            android-${{ runner.os }}-
-
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
+      # ✅ Clean and build with full logs
       - name: Clean and Build Debug APK
-        run: ./gradlew clean assembleDebug --stacktrace
+        run: ./gradlew clean assembleDebug --stacktrace --info
 
       - name: Verify APK size
         run: ls -lh app/build/outputs/apk/debug/
@@ -66,21 +61,4 @@ jobs:
             exit 1
           fi
 
-      - name: Upload APK to Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
-
-      - name: Create GitHub Release
-        if: github.ref == 'refs/heads/main'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v1.${{ github.run_number }}
-          name: Release v1.${{ github.run_number }}
-          body: |
-            🚀 Automatic release with APK build.
-          files: |
-            app/build/outputs/apk/debug/app-debug.apk
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - na
