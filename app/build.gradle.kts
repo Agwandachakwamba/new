@@ -37,3 +37,10 @@ dependencies {
     implementation("com.google.firebase:firebase-bom:34.4.0")
     implementation("com.google.firebase:firebase-database-ktx:21.2.0")
 }
+
+android {
+    defaultConfig {
+        buildConfigField("String", "API_KEY", "\"${System.getenv("API_KEY") ?: ""}\"")
+        buildConfigField("String", "OTHER_KEY", "\"${System.getenv("OTHER_KEY") ?: ""}\"")
+    }
+}
