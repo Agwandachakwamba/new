@@ -25,13 +25,11 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      # ✅ Install required SDK packages (adjust if your app needs different versions)
       - name: Install required SDK packages
         run: |
           sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools"
 
-      # ✅ Cache Gradle dependencies
-      - name: Cache Gradle
+      - name: Cache Gradle dependencies
         uses: actions/cache@v4
         with:
           path: |
@@ -44,7 +42,6 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
-      # ✅ Clean and build with full logs
       - name: Clean and Build Debug APK
         run: ./gradlew clean assembleDebug --stacktrace --info
 
